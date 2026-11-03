@@ -1,35 +1,35 @@
-# Conveyor & AMR Obstacle Detection
+# Fallen Object Detection POC (v2.1 implementation baseline)
 
-Video-based POC for detecting fallen components and generic debris in a conveyor/AMR operating area. The application uses YOLO detection and tracking, configurable floor/path regions, event generation, risk evaluation, and local evidence artifacts.
+This repository separates the reusable computer-vision pipeline from the optional Streamlit demonstration UI.
 
-## Scope and important limits
+## Important semantics
+- `fallen_onto_ground` becomes true only after the tracked conveyor object leaves the configured conveyor ROI, satisfies the configured downward-drop threshold, and is confirmed stationary.
+- Risk grading (low/medium/high) is performed **after** that boolean is set. A fall is not conditional on the yellow corridor grading polygons.
+- `amr_approach` is an independent signal, intended to become true when a tracked AMR approaches a confirmed fallen object along the connected path. See implementation limitations below.
+- Fixed yellow path polygons are provisional image-pixel geometry based on the reference clip view. They are not detected from video frames. Replace these values after actual camera/path calibration.
+- Streamlit is optional. The core imports no Streamlit module.
 
-- `Fallen_Component`: object observed on conveyor/table then falling and settling on the floor.
-- `Unknown_Debris`: new generic obstacle appearing in the floor/path area without conveyor lineage.
-- Existing floor objects are ignored during startup baseline.
-- Demo calibration is explicitly marked placeholder. Real-world coordinates, dimensions, and metric distances are not reliable until calibrated using the actual camera.
-- Red risk requires a confirmed obstacle, AMR-path overlap, AMR moving toward the obstacle, and decreasing distance over successive observations. The video-only demo cannot infer AMR identity/pose unless configured and detected.
-- Each emitted event should save a frame, clip, and JSON payload; missing measurements remain null, never fabricated.
+## Setup in VM
+1. Clone repository and enter it.
+2. Create/activate a Python environment compatible with installed CUDA/PyTorch.
+3. Install dependencies: `pip install -r requirements.txt`
+4. Place your compatible YOLO26n weights at `models/yolo26n.pt`. The model weights are not committed.
+5. Run UI: `streamlit run app.py`
+6. Or run without Streamlit: `python run_pipeline.py --source path/to/video.mp4`
+   - Camera: `python run_pipeline.py --source 0 --display`
 
-## Flow
+## Configuration
+- `config.yaml`: thresholds and provisional polygons.
+- The initial calibration mode is image pixels. Pixel coordinates are not physical metres.
+- Change model path, ROIs, and fixed corridor geometry to match your camera view.
+- Do not treat the placeholder geometry as measured or validated real-world calibration.
 
-1. Load video (file input; RTSP can be added through the same frame-source interface).
-2. Read camera/calibration and polygon settings from `config/calibration.yaml`.
-3. Run YOLO detections and persistent tracking.
-4. Update object state: baseline, conveyor-associated, falling, landed/settling, or generic floor debris.
-5. Validate candidate obstacle against floor and AMR-path polygons.
-6. Assess risk with temporal approach evidence; uncertainty remains explicit.
-7. Emit the agreed event payload and persist snapshot, clip, and JSON under `evidence/`.
-8. Stream annotated frames and event log in Streamlit.
+## Event output
+Events are written under `evidence/<signal_level>/<event_id>/` with snapshot, clip (when frames are available), and JSON payload. The payload includes:
+- `fallen_onto_ground`: confirmed conveyor fall/landing.
+- `amr_approach`: approach state (separate from fall and risk).
+- `signal_level`: low, medium, high, or uncertain.
+- `linked_to`: original fall event ID for escalation events.
 
-## Run
-
-```bash
-python -m venv .venv
-# Linux: source .venv/bin/activate
-# Windows: .venv\\Scripts\\activate
-pip install -r requirements.txt
-streamlit run app.py
-```
-
-Set `YOLO_MODEL` to a local compatible model path (default `yolo26n.pt`). Model availability depends on the installed Ultralytics release. Do not treat demo calibration as production calibration.
+## Validation status
+This repository is a code baseline, not a claim of model performance. Run the video on your VM with your actual model weights and validate the measured detections, state transitions, event timing, geometry, AMR association, and evidence artifacts. The generic pretrained model may not identify your exact tote/container class. The configured path polygons are provisional.
