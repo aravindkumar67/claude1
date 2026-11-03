@@ -1,0 +1,41 @@
+calibration:
+  status: DEMO_PLACEHOLDER
+  note: Replace values with calibration measured from the real camera before using metric coordinates.
+  image_width: 1280
+  image_height: 720
+  intrinsics:
+    fx: 900.0
+    fy: 900.0
+    cx: 640.0
+    cy: 360.0
+  distortion: [0.0, 0.0, 0.0, 0.0, 0.0]
+  # Example floor plane mapping only; not valid for real-world measurements.
+  image_to_floor_homography:
+    - [0.001, 0.0, -0.64]
+    - [0.0, 0.001, -0.36]
+    - [0.0, 0.0, 1.0]
+regions:
+  floor_polygon: [[0, 300], [1279, 300], [1279, 719], [0, 719]]
+  conveyor_polygon: [[0, 0], [1279, 0], [1279, 360], [0, 360]]
+  amr_path_polygon: [[0, 420], [1279, 420], [1279, 719], [0, 719]]
+tracking:
+  model: yolo26n.pt
+  confidence: 0.30
+  iou: 0.50
+  tracker: bytetrack.yaml
+  stationary_seconds: 1.5
+  fall_min_vertical_pixels: 18
+  baseline_seconds: 2.0
+  event_cooldown_seconds: 8.0
+risk:
+  red_distance_threshold_m: 2.0
+  trend_window: 5
+  minimum_decreasing_steps: 3
+  demo_mode: true
+amr:
+  # Configure this polygon / detection or provide AMR pose in production.
+  amr_class_names: ["amr", "mobile_robot", "robot"]
+evidence:
+  root: evidence
+  clip_seconds_before: 3
+  clip_seconds_after: 5
